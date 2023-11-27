@@ -121,8 +121,8 @@ class VectorizedPath:
             self.angles[i] = np.arctan2(
                 self.poses[j, 1] - self.poses[i, 1], self.poses[j, 0] - self.poses[i, 0]
             )
-            self.planar_poses[i, 2] = self.angles[i]
             distance_counter = 0
+        self.planar_poses[:, 2] = self.angles
 
     def compute_world_to_path_frame_tfs(self):
         """Compute the transforms matrices between world and path
