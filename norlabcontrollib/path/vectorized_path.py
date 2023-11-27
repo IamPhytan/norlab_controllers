@@ -97,10 +97,16 @@ class VectorizedPath:
             self.look_ahead_distance_counter_array[i] = look_ahead_distance_counter
 
     def compute_distances_to_goal(self):
-        distance_to_goal = 0
-        for i in range(self.n_poses - 1, 0, -1):
-            distance_to_goal += np.linalg.norm(self.poses[i, :2] - self.poses[i - 1, :2])
-            self.distances_to_goal[i - 1] = distance_to_goal
+        """Get distances between each pose and the final pose along the path"""
+        # Invert path order
+        inv_path = self.poses[::-1, :]
+        # Get the distances between each pose
+        diff_poses = np.diff(inv_path, axis=0)
+        dists = np.linalg.norm(diff_poses[:, :2], axis=1)
+        # Cumulative sum with a initial distance of 0
+        distances_to_goal = np.cumsum(np.insert(dists, 0, 0))
+        # Start from the end
+        self.distances_to_goal = distances_to_goal[::-1]
 
     def compute_angles(self):
         distance_counter = 0
@@ -161,3 +167,4 @@ if __name__ == "__main__":
     test_path = VectorizedPath(test_path_poses)
     test_path.compute_curvatures()
     test_path.compute_world_to_path_frame_tfs()
+    test_path.compute_distances_to_goal()

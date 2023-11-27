@@ -18,9 +18,11 @@ class PathTest(unittest.TestCase):
         reference_path = Path(self.test_path_poses)
         reference_path.compute_curvatures()
         reference_path.compute_world_to_path_frame_tfs()
+        reference_path.compute_distances_to_goal()
         self.curvatures = reference_path.curvatures
         self.path_to_world_tfs_array = reference_path.path_to_world_tfs_array
         self.world_to_path_tfs_array = reference_path.world_to_path_tfs_array
+        self.distances_to_goal = reference_path.distances_to_goal
 
         self.original_path = Path(self.test_path_poses)
         self.vectorized_path = VectorizedPath(self.test_path_poses)
@@ -64,6 +66,22 @@ class PathTest(unittest.TestCase):
         np.testing.assert_allclose(
             self.vectorized_path.world_to_path_tf_arr,
             self.world_to_path_tfs_array,
+        )
+
+    def testPathComputeDistances(self):
+        for _ in range(self.n):
+            self.original_path.compute_distances_to_goal()
+        np.testing.assert_allclose(
+            self.original_path.distances_to_goal,
+            self.distances_to_goal,
+        )
+
+    def testVectorizedPathComputeDistances(self):
+        for _ in range(self.n):
+            self.vectorized_path.compute_distances_to_goal()
+        np.testing.assert_allclose(
+            self.vectorized_path.distances_to_goal,
+            self.distances_to_goal,
         )
 
 
