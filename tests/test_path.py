@@ -17,7 +17,10 @@ class PathTest(unittest.TestCase):
     def setUp(self):
         reference_path = Path(self.test_path_poses)
         reference_path.compute_curvatures()
+        reference_path.compute_world_to_path_frame_tfs()
         self.curvatures = reference_path.curvatures
+        self.path_to_world_tfs_array = reference_path.path_to_world_tfs_array
+        self.world_to_path_tfs_array = reference_path.world_to_path_tfs_array
 
         self.original_path = Path(self.test_path_poses)
         self.vectorized_path = VectorizedPath(self.test_path_poses)
@@ -38,6 +41,30 @@ class PathTest(unittest.TestCase):
         for _ in range(self.n):
             self.vectorized_path.compute_curvatures()
         np.testing.assert_allclose(self.vectorized_path.curvatures, self.curvatures)
+
+    def testPathComputeWorldPathTFs(self):
+        for _ in range(self.n):
+            self.original_path.compute_world_to_path_frame_tfs()
+        np.testing.assert_allclose(
+            self.original_path.path_to_world_tfs_array,
+            self.path_to_world_tfs_array,
+        )
+        np.testing.assert_allclose(
+            self.original_path.world_to_path_tfs_array,
+            self.world_to_path_tfs_array,
+        )
+
+    def testVectorizedPathComputeWorldPathTFs(self):
+        for _ in range(self.n):
+            self.vectorized_path.compute_world_to_path_frame_tfs()
+        np.testing.assert_allclose(
+            self.vectorized_path.path_to_world_tf_arr,
+            self.path_to_world_tfs_array,
+        )
+        np.testing.assert_allclose(
+            self.vectorized_path.world_to_path_tf_arr,
+            self.world_to_path_tfs_array,
+        )
 
 
 # if __name__ == "__main__":

@@ -13,17 +13,20 @@ class VectorizedPath:
         self.pose_kdtree = KDTree(poses[:, :2])
 
         self.curvatures = np.zeros(self.n_poses)
-        self.look_ahead_curvatures = np.zeros(self.n_poses)
+        self.look_ahead_curvatures: np.ndarray = np.zeros(self.n_poses)
         self.distances_to_goal = np.zeros(self.n_poses)
-        self.angles = np.zeros(self.n_poses)
+        self.angles: np.ndarray = np.zeros(self.n_poses)
         self.angles_spatial_window = 0.25
-        self.world_to_path_tfs_array = np.ndarray((self.n_poses, 3, 3))
-        self.path_to_world_tfs_array = np.ndarray((self.n_poses, 3, 3))
+        self.path_to_world_tf_arr = np.ndarray((self.n_poses, 3, 3))
+        self.world_to_path_tf_arr = np.ndarray((self.n_poses, 3, 3))
 
     def compute_curvatures(self):
+        """Compute curvatures along the path
+        Yields a N-sized vector with values of curvature for poses [1:n-1]"""
+
         # Steps, step sizes, forward and backward
-        d_poses = np.diff(self.poses, axis=0)
-        dist = np.linalg.norm(d_poses[:, :2], axis=1)
+        diff_poses = np.diff(self.poses, axis=0)
+        dist = np.linalg.norm(diff_poses[:, :2], axis=1)
 
         # Backward and forward step sizes
         dpb = np.insert(dist, 0, np.nan)
@@ -101,7 +104,7 @@ class VectorizedPath:
 
     def compute_angles(self):
         distance_counter = 0
-        for i in range(0, self.n_poses - 1):
+        for i in range(self.n_poses - 1):
             j = i
             while distance_counter <= self.angles_spatial_window:
                 if j == self.n_poses - 1:
@@ -116,16 +119,21 @@ class VectorizedPath:
             distance_counter = 0
 
     def compute_world_to_path_frame_tfs(self):
-        path_to_world_tf = np.eye(3)
-        for i in range(0, self.n_poses):
-            path_to_world_tf[0, 0] = np.cos(self.angles[i])
-            path_to_world_tf[0, 1] = -np.sin(self.angles[i])
-            path_to_world_tf[0, 2] = self.poses[i, 0]
-            path_to_world_tf[1, 0] = np.sin(self.angles[i])
-            path_to_world_tf[1, 1] = np.cos(self.angles[i])
-            path_to_world_tf[1, 2] = self.poses[i, 1]
-            self.path_to_world_tfs_array[i, :, :] = path_to_world_tf
-            self.world_to_path_tfs_array[i, :, :] = np.linalg.inv(path_to_world_tf)
+        """Compute the transforms matrices between world and path
+        Yields a Nx3x3 matrix that contains N transformation matrices"""
+        cos_angle = np.cos(self.angles)
+        sin_angle = np.sin(self.angles)
+
+        self.path_to_world_tf_arr = np.broadcast_to(
+            np.eye(3),
+            (self.n_poses, 3, 3),
+        ).copy()
+        self.path_to_world_tf_arr[:, 0, 0] = cos_angle
+        self.path_to_world_tf_arr[:, 0, 1] = -sin_angle
+        self.path_to_world_tf_arr[:, 1, 0] = sin_angle
+        self.path_to_world_tf_arr[:, 1, 1] = cos_angle
+        self.path_to_world_tf_arr[:, :2, 2] = self.poses[:, :2]
+        self.world_to_path_tf_arr = np.linalg.inv(self.path_to_world_tf_arr)
 
     def compute_metrics(self, path_look_ahead_distance):
         self.compute_distances_to_goal()
@@ -152,3 +160,4 @@ if __name__ == "__main__":
     test_path_poses = np.load("tests/traj_a_int.npy")
     test_path = VectorizedPath(test_path_poses)
     test_path.compute_curvatures()
+    test_path.compute_world_to_path_frame_tfs()
