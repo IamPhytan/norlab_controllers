@@ -29,8 +29,13 @@ class VectorizedPath:
         dist = np.linalg.norm(diff_poses[:, :2], axis=1)
 
         # Backward and forward step sizes
+        # delta pose backward & delta pose forward
         dpb = np.insert(dist, 0, np.nan)
         dpf = np.insert(dist, dist.shape[0], np.nan)
+
+        # Squared distances
+        dpb_sq = dpb**2
+        dpf_sq = dpf**2
 
         # Denominator for derivatives
         deriv_denom = dpb * dpf * (dpb + dpf)
@@ -38,36 +43,38 @@ class VectorizedPath:
         x = self.poses[:, 0]
         y = self.poses[:, 1]
 
+        # Array mask for inner values
+        # (don't compute derivatives for the first and last values of each array)
         arr_mask = np.zeros(self.n_poses, dtype=bool)
         arr_mask[1:-1] = True
 
         # 1st derivative
         xp, yp = np.zeros((self.n_poses, 2)).T
         xp[arr_mask] = (
-            dpb[arr_mask] ** 2 * x[:-2]
-            + (dpf[arr_mask] ** 2 - dpb[arr_mask] ** 2) * x[1:-1]
-            - dpf[arr_mask] ** 2 * x[2:]
+            dpb_sq[arr_mask] * x[:-2]
+            + (dpf_sq[arr_mask] - dpb_sq[arr_mask]) * x[1:-1]
+            - dpf_sq[arr_mask] * x[2:]
         )
         xp[arr_mask] /= deriv_denom[arr_mask]
         yp[arr_mask] = (
-            dpb[arr_mask] ** 2 * y[:-2]
-            + (dpf[arr_mask] ** 2 - dpb[arr_mask] ** 2) * y[1:-1]
-            - dpf[arr_mask] ** 2 * y[2:]
+            dpb_sq[arr_mask] * y[:-2]
+            + (dpf_sq[arr_mask] - dpb_sq[arr_mask]) * y[1:-1]
+            - dpf_sq[arr_mask] * y[2:]
         )
         yp[arr_mask] /= deriv_denom[arr_mask]
 
         # 2nd derivative
         xpp, ypp = np.zeros((self.n_poses, 2)).T
         xpp[arr_mask] = (
-            dpb[arr_mask] ** 2 * xp[:-2]
-            + (dpf[arr_mask] ** 2 - dpb[arr_mask] ** 2) * xp[1:-1]
-            - dpf[arr_mask] ** 2 * xp[2:]
+            dpb_sq[arr_mask] * xp[:-2]
+            + (dpf_sq[arr_mask] - dpb_sq[arr_mask]) * xp[1:-1]
+            - dpf_sq[arr_mask] * xp[2:]
         )
         xpp[arr_mask] /= deriv_denom[arr_mask]
         ypp[arr_mask] = (
-            dpb[arr_mask] ** 2 * yp[:-2]
-            + (dpf[arr_mask] ** 2 - dpb[arr_mask] ** 2) * yp[1:-1]
-            - dpf[arr_mask] ** 2 * yp[2:]
+            dpb_sq[arr_mask] * yp[:-2]
+            + (dpf_sq[arr_mask] - dpb_sq[arr_mask]) * yp[1:-1]
+            - dpf_sq[arr_mask] * yp[2:]
         )
         ypp[arr_mask] /= deriv_denom[arr_mask]
 
@@ -79,6 +86,7 @@ class VectorizedPath:
         # self.curvatures = np.sqrt(np.square(curvatures_list[0]) + np.square(curvatures_list[1]))
 
     def compute_look_ahead_curvatures(self, look_ahead_distance=1.0):
+        # TODO: Refactor with vectorized operations
         self.look_ahead_distance_counter_array = np.zeros(self.n_poses)
         for i in range(0, self.n_poses - 1):
             path_iterator = 0
@@ -109,6 +117,7 @@ class VectorizedPath:
         self.distances_to_goal = distances_to_goal[::-1]
 
     def compute_angles(self):
+        # TODO: Refactor with vectorized operations
         distance_counter = 0
         for i in range(self.n_poses - 1):
             j = i
