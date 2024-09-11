@@ -1,4 +1,9 @@
-numpy
-scipy
-PyYAML
+numpy==1.23.1
+scipy==1.8.0
+PyYAML==6.0.1
 casadi==3.6.0
+pandas==2.2.1
+
+# Dev
+black==23.1.0
+pylint==2.14.5
